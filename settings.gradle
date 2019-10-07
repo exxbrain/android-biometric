@@ -1,0 +1,2 @@
+include ':app', ':android-biometric-compat'
+rootProject.name='android-biometric'
