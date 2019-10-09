@@ -48,8 +48,6 @@ import android.widget.TextView;
  * This class is not meant to be preserved across process death; for security reasons, the
  * BiometricPromptCompat will automatically dismiss the dialog when the activity is no longer in the
  * foreground.
- *
- * @hide
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 @SuppressLint("SyntheticAccessor")

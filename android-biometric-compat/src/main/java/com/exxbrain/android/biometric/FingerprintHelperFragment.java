@@ -40,8 +40,6 @@ import java.util.concurrent.Executor;
  * across device configuration changes. This class is not meant to be preserved after process death;
  * for security reasons, the BiometricPromptCompat will automatically stop authentication when the
  * activity is no longer in the foreground.
- *
- * @hide
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 @SuppressLint("SyntheticAccessor")

@@ -221,8 +221,9 @@ public class BiometricPrompt implements BiometricConstants {
             private final Bundle mBundle = new Bundle();
 
             /**
-             * @param title title
              * Required: Set the title to display.
+             *
+             * @param title title
              * @return Builder
              */
             @NonNull
@@ -232,8 +233,9 @@ public class BiometricPrompt implements BiometricConstants {
             }
 
             /**
-             * @param subtitle sutitle
              * Optional: Set the subtitle to display.
+             *
+             * @param subtitle sutitle
              * @return Builder
              */
             @NonNull
@@ -243,7 +245,10 @@ public class BiometricPrompt implements BiometricConstants {
             }
 
             /**
-             * Optional: Set the description to display.
+             * Optional: Set the description to display
+             *
+             * @param description description.
+             * @return Builder
              */
             @NonNull
             public Builder setDescription(@Nullable CharSequence description) {
@@ -255,6 +260,9 @@ public class BiometricPrompt implements BiometricConstants {
              * Required: Set the text for the negative button. This would typically be used as a
              * "Cancel" button, but may be also used to show an alternative method for
              * authentication, such as screen that asks for a backup password.
+             *
+             * @param text for the negative button
+             * @return Builder
              */
             @NonNull
             public Builder setNegativeButtonText(@NonNull CharSequence text) {
@@ -279,6 +287,10 @@ public class BiometricPrompt implements BiometricConstants {
              * requiring confirmation.
              *
              * This method only applies to Q and above.
+             *
+             * @param requireConfirmation require user confirmation after a biometric has
+             *                            been authenticated
+             * @return Builder
              */
             @NonNull
             public Builder setConfirmationRequired(boolean requireConfirmation) {
@@ -304,6 +316,7 @@ public class BiometricPrompt implements BiometricConstants {
              *
              * @param enable When true, the prompt will fall back to ask for the user's device
              *               credentials (PIN, pattern, or password).
+             * @return Builder
              */
             @NonNull
             public Builder setDeviceCredentialAllowed(boolean enable) {
