@@ -4,16 +4,24 @@ Android biometric library inspired from [androidx.biometric](https://developer.a
 ## Example 
 See example app
 ```java
-Executor executor = Executors.newSingleThreadExecutor();
-
-BiometricPrompt biometricPrompt = new BiometricPrompt(this, executor, new BiometricPrompt.AuthenticationCallback() {
+Executor executor = null;
+if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+    executor = MainActivity.this.getMainExecutor();
+}
+mBiometricPrompt = new BiometricPrompt(MainActivity.this, executor, new BiometricPrompt.AuthenticationCallback() {
     @Override
     public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
         super.onAuthenticationError(errorCode, errString);
-
         if (errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON) {
-            Log.i(TAG, "user clicked negative button");
+            // Just negative button tap
+            return;
         }
+        new AlertDialog.Builder(MainActivity.this)
+                .setTitle("Error")
+                .setMessage(errorCode + ": " + errString)
+                .create()
+                .show();
+
     }
 
     @Override
@@ -34,6 +42,5 @@ BiometricPrompt.PromptInfo promptInfo = new BiometricPrompt.PromptInfo.Builder()
         .setNegativeButtonText("Negative Button")
         .build();
 
-biometricPrompt.authenticate(promptInfo);
-
+mBiometricPrompt.authenticate(promptInfo);
 ```
