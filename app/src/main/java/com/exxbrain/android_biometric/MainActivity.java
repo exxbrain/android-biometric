@@ -15,13 +15,11 @@ import com.exxbrain.android.biometric.BiometricManager;
 import com.exxbrain.android.biometric.BiometricPrompt;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
     private Button button;
-    private BiometricPrompt mBiometricPrompt;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -58,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
                 }
 
 
-                mBiometricPrompt = new BiometricPrompt(MainActivity.this, executor, new BiometricPrompt.AuthenticationCallback() {
+                BiometricPrompt biometricPrompt = new BiometricPrompt(MainActivity.this, executor, new BiometricPrompt.AuthenticationCallback() {
                     @Override
                     public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
                         super.onAuthenticationError(errorCode, errString);
@@ -92,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
                         .setNegativeButtonText("Negative Button")
                         .build();
 
-                mBiometricPrompt.authenticate(promptInfo);
+                biometricPrompt.authenticate(promptInfo);
             }
         });
     }
