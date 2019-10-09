@@ -1,6 +1,25 @@
 # Android biometric for apps that use legacy support libraries
 Android biometric library inspired from [androidx.biometric](https://developer.android.com/reference/androidx/biometric/package-summary) for non androidx apps.
 
+## How to
+Get to your project:
+```groovy
+allprojects {
+    repositories {
+        //...
+        maven { url 'https://jitpack.io' }
+    }
+}
+```
+
+[![](https://jitpack.io/v/exxbrain/android-biometric.svg)](https://jitpack.io/#exxbrain/android-biometric)
+```groovy
+dependencies {
+    implementation 'com.github.exxbrain:android-biometric:{version}'
+    //...
+}
+```
+
 ## Features 
 
 ### canAuthenticate
@@ -14,7 +33,7 @@ if (error != BiometricManager.BIOMETRIC_SUCCESS) {
 ### authenticate
 ```java
 BiometricPrompt biometricPrompt = new BiometricPrompt(MainActivity.this, executor, new BiometricPrompt.AuthenticationCallback() {
-...
+//...
 }
 
 BiometricPrompt.PromptInfo promptInfo = new BiometricPrompt.PromptInfo.Builder()
