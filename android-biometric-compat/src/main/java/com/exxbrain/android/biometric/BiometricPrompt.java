@@ -221,7 +221,9 @@ public class BiometricPrompt implements BiometricConstants {
             private final Bundle mBundle = new Bundle();
 
             /**
+             * @param title title
              * Required: Set the title to display.
+             * @return Builder
              */
             @NonNull
             public Builder setTitle(@NonNull CharSequence title) {
@@ -230,7 +232,9 @@ public class BiometricPrompt implements BiometricConstants {
             }
 
             /**
+             * @param subtitle sutitle
              * Optional: Set the subtitle to display.
+             * @return Builder
              */
             @NonNull
             public Builder setSubtitle(@Nullable CharSequence subtitle) {
@@ -441,7 +445,6 @@ public class BiometricPrompt implements BiometricConstants {
      * the {@link BiometricPrompt} can be used to update the {@link Executor} and
      * {@link AuthenticationCallback}. This should be used to update the
      * {@link AuthenticationCallback} after configuration changes.
-     * such as {@link // FragmentActivity#onCreate(Bundle)}.
      *
      * @param fragmentActivity A reference to the client's activity.
      * @param executor         An executor to handle callback events.

@@ -4,12 +4,23 @@ group 'com.exxbrain.android'
 version '0.1'
 
 project.ext {
-    mavGitUrl = 'https://github.com/exxbrain/android-biometric.git'
-    mavProjectName = 'AndroidBiometricCompat'
+
+    artifactId = 'android-biometric-compat'
+    projectName = 'AndroidBiometricCompat'
+    developer = 'exxbrain'
+    developerName = 'Denis Zakharov'
+    developerEmail = 'exxbrain@gmail.com'
+    description = "Android biometric library inspired from androidx.biometric for non androidx apps"
+    websiteUrl = 'https://github.com/exxbrain/android-biometric'
+    vcsUrl = 'https://github.com/exxbrain/android-biometric.git'
+    issueTrackerUrl = 'https://github.com/exxbrain/android-biometric/issues'
+
+    mavGitUrl = vcsUrl
+    mavProjectName = projectName
     mavLibraryLicenses = ["Apache-2.0":'http://www.apache.org/licenses/LICENSE-2.0.txt']
-    mavLibraryDescription = "Android biometric library inspired from androidx.biometric for non androidx apps"
+    mavLibraryDescription = description
     mavPublishToMavenLocal = true
-    mavSiteUrl = 'https://github.com/exxbrain/android-biometric'
+    mavSiteUrl = websiteUrl
 }
 
 def properties = new Properties()
@@ -18,21 +29,21 @@ properties.load(new FileInputStream("local.properties"))
 bintray {
     user = properties.getProperty("bintray.user")
     key = properties.getProperty("bintray.apikey")
-    publications = ['Production']
+    publications = ['MavenPublication']
     configurations = ['archives']
     override = true
     pkg {
         repo = 'maven'
-        name = 'AndroidBiometricCompat'
-        desc = "Android biometric library inspired from androidx.biometric for non androidx apps"
-        websiteUrl = 'https://github.com/exxbrain/android-biometric'
-        issueTrackerUrl = 'https://github.com/exxbrain/android-biometric/issues'
+        name = projectName
+        desc = description
+        websiteUrl = websiteUrl
+        issueTrackerUrl = issueTrackerUrl
         labels = ['biometric', 'androidx']
         githubRepo = 'exxbrain/android-biometric' //Optional Github repository
         githubReleaseNotesFile = 'README.md' //Optional Github readme file
         publicDownloadNumbers = true
         licenses = ['Apache-2.0']
-        vcsUrl = 'https://github.com/exxbrain/android-biometric.git'
+        vcsUrl =vcsUrl
         version {
             name = this.version
             desc = "Version ${this.version}"

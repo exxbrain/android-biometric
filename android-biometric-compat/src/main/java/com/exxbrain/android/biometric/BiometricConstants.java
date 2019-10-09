@@ -21,7 +21,6 @@ import android.support.annotation.RestrictTo;
 /**
  * Interface containing all of the biometric modality agnostic constants. These constants must
  * be kept in sync with the platform BiometricConstants.java
- * @hide
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public interface BiometricConstants {
@@ -55,9 +54,6 @@ public interface BiometricConstants {
      */
     int ERROR_CANCELED = 5;
 
-    /**
-     * @hide
-     */
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     int ERROR_UNABLE_TO_REMOVE = 6;
 
@@ -87,7 +83,7 @@ public interface BiometricConstants {
     /**
      * The user canceled the operation. Upon receiving this, applications should use alternate
      * authentication (e.g. a password). The application should also provide the means to return to
-     * biometric authentication, such as a "use <biometric>" button.
+     * biometric authentication, such as a "use biometric" button.
      */
     int ERROR_USER_CANCELED = 10;
 
@@ -111,9 +107,7 @@ public interface BiometricConstants {
      */
     int ERROR_NO_DEVICE_CREDENTIAL = 14;
 
-    /**
-     * @hide
-     */
+
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     int ERROR_VENDOR_BASE = 1000;
 }
