@@ -455,9 +455,6 @@ public class BiometricPrompt implements BiometricConstants {
         if (fragmentActivity == null) {
             throw new IllegalArgumentException("FragmentActivity must not be null");
         }
-        if (executor == null) {
-            throw new IllegalArgumentException("Executor must not be null");
-        }
         if (callback == null) {
             throw new IllegalArgumentException("AuthenticationCallback must not be null");
         }
