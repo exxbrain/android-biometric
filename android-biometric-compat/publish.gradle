@@ -1,26 +1,16 @@
 apply plugin: 'com.jfrog.bintray'
+apply plugin: 'maven-publish'
 
 group 'com.exxbrain.android'
 version '0.1'
 
 project.ext {
-
-    artifactId = 'android-biometric-compat'
-    projectName = 'AndroidBiometricCompat'
-    developer = 'exxbrain'
-    developerName = 'Denis Zakharov'
-    developerEmail = 'exxbrain@gmail.com'
-    description = "Android biometric library inspired from androidx.biometric for non androidx apps"
-    websiteUrl = 'https://github.com/exxbrain/android-biometric'
-    vcsUrl = 'https://github.com/exxbrain/android-biometric.git'
-    issueTrackerUrl = 'https://github.com/exxbrain/android-biometric/issues'
-
-    mavGitUrl = vcsUrl
-    mavProjectName = projectName
+    mavGitUrl = 'https://github.com/exxbrain/android-biometric.git'
+    mavProjectName = 'AndroidBiometricCompat'
     mavLibraryLicenses = ["Apache-2.0":'http://www.apache.org/licenses/LICENSE-2.0.txt']
-    mavLibraryDescription = description
+    mavLibraryDescription = 'Android biometric library inspired from androidx.biometric for non androidx apps'
     mavPublishToMavenLocal = true
-    mavSiteUrl = websiteUrl
+    mavSiteUrl = 'https://github.com/exxbrain/android-biometric'
 }
 
 def properties = new Properties()
@@ -29,21 +19,21 @@ properties.load(new FileInputStream("local.properties"))
 bintray {
     user = properties.getProperty("bintray.user")
     key = properties.getProperty("bintray.apikey")
-    publications = ['MavenPublication']
     configurations = ['archives']
     override = true
     pkg {
         repo = 'maven'
-        name = projectName
-        desc = description
-        websiteUrl = websiteUrl
-        issueTrackerUrl = issueTrackerUrl
-        labels = ['biometric', 'androidx']
+        publications = ['MyPublication']
+        name = 'AndroidBiometricCompat'
+        desc = 'Android biometric library inspired from androidx.biometric for non androidx apps'
+        websiteUrl = 'https://github.com/exxbrain/android-biometric'
+        issueTrackerUrl = 'https://github.com/exxbrain/android-biometric/issues'
+        labels = ['biometric', 'biometrics', 'androidx', 'compat', 'android']
         githubRepo = 'exxbrain/android-biometric' //Optional Github repository
         githubReleaseNotesFile = 'README.md' //Optional Github readme file
         publicDownloadNumbers = true
         licenses = ['Apache-2.0']
-        vcsUrl =vcsUrl
+        vcsUrl = 'https://github.com/exxbrain/android-biometric.git'
         version {
             name = this.version
             desc = "Version ${this.version}"
@@ -53,4 +43,51 @@ bintray {
     }
 }
 
-apply from: 'https://raw.githubusercontent.com/sky-uk/gradle-maven-plugin/master/gradle-mavenizer.gradle'
+// Create the pom configuration:
+def pomConfig = {
+    licenses {
+        license {
+            name "The Apache Software License, Version 2.0"
+            url "http://www.apache.org/licenses/LICENSE-2.0.txt"
+            distribution "repo"
+        }
+    }
+    developers {
+        developer {
+            id "exxbrain"
+            name "Denis Zakharov"
+            email "exxbrain@gmail.com"
+        }
+    }
+
+    scm {
+        url "https://github.com/exxbrain/android-biometric.git"
+    }
+}
+
+task sourcesJar(type: Jar) {
+    classifier = 'sources'
+    from android.sourceSets.main.java.srcDirs
+}
+
+artifacts {
+    archives sourcesJar
+}
+
+// Create the publication with the pom configuration:
+publishing {
+    publications {
+        MyPublication(MavenPublication) {
+            groupId group
+            artifactId 'android-biometric-compat'
+            version version
+            pom.withXml {
+                def root = asNode()
+                root.appendNode('description', 'Android biometric library inspired from androidx.biometric for non androidx apps')
+                root.appendNode('name', 'Android Biometric Compat')
+                root.appendNode('url', 'https://github.com/exxbrain/android-biometric')
+                root.children().last() + pomConfig
+            }
+        }
+    }
+}
