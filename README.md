@@ -12,10 +12,10 @@ allprojects {
 }
 ```
 
-[![](https://jitpack.io/v/exxbrain/android-biometric.svg)](https://jitpack.io/#exxbrain/android-biometric)
+Version: [![](https://jitpack.io/v/exxbrain/android-biometric.svg)](https://jitpack.io/#exxbrain/android-biometric)
 ```groovy
 dependencies {
-    implementation 'com.github.exxbrain:android-biometric:{version}'
+    implementation 'com.github.exxbrain:android-biometric:{Version}'
     //...
 }
 ```
