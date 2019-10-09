@@ -38,6 +38,10 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
                         super.onAuthenticationError(errorCode, errString);
+                        if (errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON) {
+                            // Just negative button tap
+                            return;
+                        }
                         new AlertDialog.Builder(MainActivity.this)
                                 .setTitle("Error")
                                 .setMessage(errorCode + ": " + errString)
@@ -65,7 +69,6 @@ public class MainActivity extends AppCompatActivity {
                         .build();
 
                 mBiometricPrompt.authenticate(promptInfo);
-
             }
         });
     }
