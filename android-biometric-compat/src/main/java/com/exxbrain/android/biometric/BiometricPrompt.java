@@ -18,7 +18,6 @@ package com.exxbrain.android.biometric;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.ActivityManager;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.arch.lifecycle.Lifecycle;
@@ -35,12 +34,9 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.hardware.fingerprint.FingerprintManagerCompat;
 import android.util.Log;
-import android.widget.Toast;
 
 import java.lang.annotation.Retention;
 import java.security.Signature;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.Executor;
 
 import javax.crypto.Cipher;
@@ -184,7 +180,7 @@ public class BiometricPrompt implements BiometricConstants {
     /**
      * Callback structure provided to {@link BiometricPrompt}. Users of {@link
      * BiometricPrompt} must provide an implementation of this for listening to
-     * fingerprint events.
+     * fingerprint Events.
      */
     public abstract static class AuthenticationCallback {
         /**
@@ -401,6 +397,8 @@ public class BiometricPrompt implements BiometricConstants {
         }
     }
 
+    public static LifecycleEvents Events;
+
     // Passed in from the client.
     private Activity mActivity;
     private Fragment mFragment;
@@ -454,7 +452,7 @@ public class BiometricPrompt implements BiometricConstants {
      */
     private final LifecycleObserver mLifecycleObserver = new LifecycleObserver() {
         @OnLifecycleEvent(Lifecycle.Event.ON_PAUSE)
-        void onPause() {
+        void onPause(Fragment fragment) {
             if (!isChangingConfigurations() && !usingBiometricFragment()) {
                 // May be null if no authentication is occurring.
                 if (mFingerprintDialogFragment != null && mFingerprintHelperFragment != null) {
@@ -464,14 +462,22 @@ public class BiometricPrompt implements BiometricConstants {
             }
         }
         @OnLifecycleEvent(Lifecycle.Event.ON_RESUME)
-        void onResume() {
+        void onResume(Fragment fragment) {
             if (!usingBiometricFragment()) {
-                mFingerprintDialogFragment =
-                        (FingerprintDialogFragment) getFragmentManager().findFragmentByTag(
-                                DIALOG_FRAGMENT_TAG);
-                mFingerprintHelperFragment =
-                        (FingerprintHelperFragment) getFragmentManager().findFragmentByTag(
-                                FINGERPRINT_HELPER_FRAGMENT_TAG);
+                FingerprintDialogFragment dialogFragment = (FingerprintDialogFragment) getFragmentManager().findFragmentByTag(
+                        DIALOG_FRAGMENT_TAG);
+                if (dialogFragment == null && fragment instanceof FingerprintDialogFragment) {
+                    dialogFragment = (FingerprintDialogFragment) fragment;
+                }
+                FingerprintHelperFragment helperFragment = (FingerprintHelperFragment) getFragmentManager().findFragmentByTag(
+                        FINGERPRINT_HELPER_FRAGMENT_TAG);
+
+                if (dialogFragment == null || helperFragment == null) {
+                    return;
+                }
+
+                mFingerprintDialogFragment = dialogFragment;
+                mFingerprintHelperFragment = helperFragment;
 
                 if (DEBUG) Log.v(TAG, "FingerprintDialogFragment: " + mFingerprintDialogFragment);
                 if (DEBUG) Log.v(TAG, "FingerprintHelperFragment: " + mFingerprintHelperFragment);
@@ -501,8 +507,8 @@ public class BiometricPrompt implements BiometricConstants {
      * {@link AuthenticationCallback} after configuration changes.
      *
      * @param activity A reference to the client's activity.
-     * @param executor         An executor to handle callback events.
-     * @param callback         An object to receive authentication events.
+     * @param executor         An executor to handle callback Events.
+     * @param callback         An object to receive authentication Events.
      */
     @SuppressLint("LambdaLast")
     public BiometricPrompt(@NonNull Activity activity,
@@ -520,6 +526,8 @@ public class BiometricPrompt implements BiometricConstants {
         mActivity = activity;
         mAuthenticationCallback = callback;
         mExecutor = executor;
+
+        Events = new LifecycleEvents(mLifecycleObserver);
     }
 
     /**
@@ -534,8 +542,8 @@ public class BiometricPrompt implements BiometricConstants {
      * such as {@link Fragment#onCreate(Bundle)}.
      *
      * @param fragment A reference to the client's fragment.
-     * @param executor An executor to handle callback events.
-     * @param callback An object to receive authentication events.
+     * @param executor An executor to handle callback Events.
+     * @param callback An object to receive authentication Events.
      */
     @SuppressLint("LambdaLast")
     public BiometricPrompt(@NonNull Fragment fragment,
@@ -552,6 +560,8 @@ public class BiometricPrompt implements BiometricConstants {
         mFragment = fragment;
         mAuthenticationCallback = callback;
         mExecutor = executor;
+
+        Events = new LifecycleEvents(mLifecycleObserver);
     }
 
     /**
@@ -640,7 +650,7 @@ public class BiometricPrompt implements BiometricConstants {
             if (fingerprintDialogFragment != null) {
                 mFingerprintDialogFragment = fingerprintDialogFragment;
             } else {
-                mFingerprintDialogFragment = FingerprintDialogFragment.newInstance(mLifecycleObserver);
+                mFingerprintDialogFragment = FingerprintDialogFragment.newInstance();
             }
 
             mFingerprintDialogFragment.setNegativeButtonListener(mNegativeButtonListener);

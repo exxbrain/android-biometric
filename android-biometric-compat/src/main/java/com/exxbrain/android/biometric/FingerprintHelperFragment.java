@@ -18,6 +18,8 @@ package com.exxbrain.android.biometric;
 
 import android.annotation.SuppressLint;
 import android.app.Fragment;
+import android.arch.lifecycle.Lifecycle;
+import android.arch.lifecycle.LifecycleObserver;
 import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
@@ -257,6 +259,18 @@ public class FingerprintHelperFragment extends Fragment {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
         mContext = getActivity();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        BiometricPrompt.Events.raise(Lifecycle.Event.ON_RESUME, this);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        BiometricPrompt.Events.raise(Lifecycle.Event.ON_PAUSE, this);
     }
 
     @Override
