@@ -33,9 +33,13 @@ if (error != BiometricManager.BIOMETRIC_SUCCESS) {
 
 ### authenticate
 ```java
-BiometricPrompt biometricPrompt = new BiometricPrompt(MainActivity.this, executor, new BiometricPrompt.AuthenticationCallback() {
-//...
-}
+BiometricPrompt.AuthenticationCallback authenticationCallback = 
+         new BiometricPrompt.AuthenticationCallback() {
+              //...
+         };
+
+BiometricPrompt biometricPrompt = 
+         new BiometricPrompt(MainActivity.this, executor, authenticationCallback);
 
 BiometricPrompt.PromptInfo promptInfo = new BiometricPrompt.PromptInfo.Builder()
         .setTitle("Set the title to display.")
