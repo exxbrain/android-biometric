@@ -17,6 +17,9 @@
 package com.exxbrain.android.biometric;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.app.Fragment;
+import android.app.FragmentManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Build;
@@ -26,9 +29,6 @@ import android.os.Handler;
 import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
-import android.support.v4.app.FragmentManager;
 import android.support.v4.hardware.fingerprint.FingerprintManagerCompat;
 import android.util.Log;
 
@@ -394,7 +394,7 @@ public class BiometricPrompt implements BiometricConstants {
     }
 
     // Passed in from the client.
-    private FragmentActivity mFragmentActivity;
+    private Activity mActivity;
     private Fragment mFragment;
     private final Executor mExecutor;
     private final AuthenticationCallback mAuthenticationCallback;
@@ -459,15 +459,15 @@ public class BiometricPrompt implements BiometricConstants {
      * {@link AuthenticationCallback}. This should be used to update the
      * {@link AuthenticationCallback} after configuration changes.
      *
-     * @param fragmentActivity A reference to the client's activity.
+     * @param activity A reference to the client's activity.
      * @param executor         An executor to handle callback events.
      * @param callback         An object to receive authentication events.
      */
     @SuppressLint("LambdaLast")
-    public BiometricPrompt(@NonNull FragmentActivity fragmentActivity,
+    public BiometricPrompt(@NonNull Activity activity,
             @NonNull Executor executor, @NonNull AuthenticationCallback callback) {
 
-        if (fragmentActivity == null) {
+        if (activity == null) {
             throw new IllegalArgumentException("FragmentActivity must not be null");
         }
         if (executor == null) {
@@ -476,7 +476,7 @@ public class BiometricPrompt implements BiometricConstants {
         if (callback == null) {
             throw new IllegalArgumentException("AuthenticationCallback must not be null");
         }
-        mFragmentActivity = fragmentActivity;
+        mActivity = activity;
         mAuthenticationCallback = callback;
         mExecutor = executor;
     }
@@ -538,17 +538,10 @@ public class BiometricPrompt implements BiometricConstants {
 
     private void authenticateInternal(@NonNull PromptInfo info, @Nullable CryptoObject crypto) {
 
-        // Don't launch prompt if state has already been saved (potential for state loss).
-        final FragmentManager fragmentManager = getFragmentManager();
-        if (fragmentManager.isStateSaved()) {
-            Log.w(TAG, "Not launching prompt. authenticate() called after onSaveInstanceState()");
-            return;
-        }
-
         mInfo = info;
 
         if (usingBiometricFragment()) {
-            Context context = mFragmentActivity != null ? mFragmentActivity : mFragment.getActivity();
+            Context context = mActivity != null ? mActivity : mFragment.getActivity();
             android.hardware.biometrics.BiometricPrompt.Builder promptBuilder =
                     new android.hardware.biometrics.BiometricPrompt.Builder(context)
                             .setTitle(info.getTitle())
@@ -597,6 +590,13 @@ public class BiometricPrompt implements BiometricConstants {
                 prompt.authenticate(mCancellationSignal, mExecutor, callback);
             }
         } else {
+            // Don't launch prompt if state has already been saved (potential for state loss).
+            final FragmentManager fragmentManager = getFragmentManager();
+//            if (fragmentManager.isStateSaved()) {
+//                Log.w(TAG, "Not launching prompt. authenticate() called after onSaveInstanceState()");
+//                return;
+//            }
+
             // Create the UI
             FingerprintDialogFragment fingerprintDialogFragment =
                     (FingerprintDialogFragment) fragmentManager.findFragmentByTag(
@@ -646,11 +646,12 @@ public class BiometricPrompt implements BiometricConstants {
                 fragmentManager.beginTransaction().attach(mFingerprintHelperFragment)
                         .commitAllowingStateLoss();
             }
+
+            fragmentManager.executePendingTransactions();
         }
 
         // For the case when onResume() is being called right after authenticate,
         // we need to make sure that all fragment transactions have been committed.
-        fragmentManager.executePendingTransactions();
     }
 
     /**
@@ -672,8 +673,8 @@ public class BiometricPrompt implements BiometricConstants {
      * manager for a client activity or the child fragment manager for a client fragment.
      */
     private FragmentManager getFragmentManager() {
-        return mFragmentActivity != null ? mFragmentActivity.getSupportFragmentManager()
-                : mFragment.getChildFragmentManager();
+        return mActivity != null ? mActivity.getFragmentManager()
+                : mFragment.getFragmentManager();
     }
 
     /**

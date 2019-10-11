@@ -17,6 +17,7 @@
 package com.exxbrain.android.biometric;
 
 import android.annotation.SuppressLint;
+import android.app.Fragment;
 import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
@@ -24,8 +25,6 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.RestrictTo;
 import android.support.annotation.VisibleForTesting;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
 import android.support.v4.hardware.fingerprint.FingerprintManagerCompat;
 import android.support.v4.os.CancellationSignal;
 import android.util.Log;
@@ -257,7 +256,7 @@ public class FingerprintHelperFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
-        mContext = getContext();
+        mContext = getActivity();
     }
 
     @Override
@@ -331,7 +330,6 @@ public class FingerprintHelperFragment extends Fragment {
      */
     private void cleanup() {
         mShowing = false;
-        FragmentActivity activity = getActivity();
         if (getFragmentManager() != null) {
             getFragmentManager().beginTransaction().detach(this).commitAllowingStateLoss();
         }
