@@ -1,4 +1,6 @@
-# Android biometric for apps that use legacy support libraries
+[![](https://jitpack.io/v/exxbrain/android-biometric.svg)](https://jitpack.io/#exxbrain/android-biometric)
+
+# Android biometric
 Android biometric library inspired from [androidx.biometric](https://developer.android.com/reference/androidx/biometric/package-summary) for non androidx apps.
 
 ## How to
@@ -12,7 +14,6 @@ allprojects {
 }
 ```
 
-Version: [![](https://jitpack.io/v/exxbrain/android-biometric.svg)](https://jitpack.io/#exxbrain/android-biometric)
 ```groovy
 dependencies {
     implementation 'com.github.exxbrain:android-biometric:{Version}'
