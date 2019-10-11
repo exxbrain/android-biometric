@@ -20,6 +20,9 @@ import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
+import android.arch.lifecycle.Lifecycle;
+import android.arch.lifecycle.LifecycleObserver;
+import android.arch.lifecycle.OnLifecycleEvent;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.res.Resources;
@@ -43,6 +46,8 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import java.lang.reflect.Method;
+
 /**
  * This class implements a custom AlertDialog that prompts the user for fingerprint authentication.
  * This class is not meant to be preserved across process death; for security reasons, the
@@ -52,6 +57,31 @@ import android.widget.TextView;
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 @SuppressLint("SyntheticAccessor")
 public class FingerprintDialogFragment extends DialogFragment {
+
+    private static class Events {
+        LifecycleObserver observer;
+        Events(LifecycleObserver observer) {
+            this.observer = observer;
+        }
+
+        void raise(Lifecycle.Event event) {
+            Method[] methods = observer.getClass().getDeclaredMethods();
+            for(Method mt : methods) {
+                if (mt.isAnnotationPresent(OnLifecycleEvent.class)) {
+                    OnLifecycleEvent annotation = mt.getAnnotation(OnLifecycleEvent.class);
+                    if (annotation.value() == event) {
+                        try {
+                            mt.invoke(observer);
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static Events events;
 
     private static final String TAG = "FingerprintDialogFrag";
     private static final String KEY_DIALOG_BUNDLE = "SavedBundle";
@@ -87,8 +117,9 @@ public class FingerprintDialogFragment extends DialogFragment {
     /**
      * Creates a dialog requesting for Fingerprint authentication.
      */
-    static FingerprintDialogFragment newInstance() {
+    static FingerprintDialogFragment newInstance(LifecycleObserver observer) {
         FingerprintDialogFragment fragment = new FingerprintDialogFragment();
+        events = new Events(observer);
         return fragment;
     }
 
@@ -208,6 +239,7 @@ public class FingerprintDialogFragment extends DialogFragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mContext = getActivity();
+        events.raise(Lifecycle.Event.ON_CREATE);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             mErrorColor = getThemedColorFor(android.R.attr.colorError);
@@ -222,6 +254,7 @@ public class FingerprintDialogFragment extends DialogFragment {
         super.onResume();
         mLastState = STATE_NONE;
         updateFingerprintIcon(STATE_FINGERPRINT);
+        events.raise(Lifecycle.Event.ON_RESUME);
     }
 
     @Override
@@ -229,6 +262,7 @@ public class FingerprintDialogFragment extends DialogFragment {
         super.onPause();
         // Remove everything since the fragment is going away.
         mHandler.removeCallbacksAndMessages(null);
+        events.raise(Lifecycle.Event.ON_PAUSE);
     }
 
     @Override
