@@ -17,10 +17,7 @@
 package com.exxbrain.android.biometric;
 
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.DialogFragment;
-import android.arch.lifecycle.Lifecycle;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.res.Resources;
@@ -35,7 +32,9 @@ import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
 import android.support.annotation.RestrictTo;
 import android.support.annotation.VisibleForTesting;
+import android.support.v4.app.DialogFragment;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.TypedValue;
@@ -49,6 +48,8 @@ import android.widget.TextView;
  * This class is not meant to be preserved across process death; for security reasons, the
  * BiometricPromptCompat will automatically dismiss the dialog when the activity is no longer in the
  * foreground.
+ *
+ * @hide
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 @SuppressLint("SyntheticAccessor")
@@ -141,6 +142,30 @@ public class FingerprintDialogFragment extends DialogFragment {
     @VisibleForTesting
     DialogInterface.OnClickListener mNegativeButtonListener;
 
+    // Also created once and retained.
+    private final DialogInterface.OnClickListener mDeviceCredentialButtonListener =
+            new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(final DialogInterface dialog, int which) {
+                    if (which == DialogInterface.BUTTON_NEGATIVE) {
+                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+                            Log.e(TAG, "Failed to check device credential."
+                                    + " Not supported prior to L.");
+                            return;
+                        }
+
+                        Utils.launchDeviceCredentialConfirmation(
+                                TAG, FingerprintDialogFragment.this.getActivity(), mBundle,
+                                new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        // Dismiss the fingerprint dialog without forwarding errors.
+                                        FingerprintDialogFragment.this.onCancel(dialog);
+                                    }
+                                });
+                    }
+                }
+            };
 
     @Override
     @NonNull
@@ -149,7 +174,7 @@ public class FingerprintDialogFragment extends DialogFragment {
             mBundle = savedInstanceState.getBundle(KEY_DIALOG_BUNDLE);
         }
 
-        final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+        final AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
         builder.setTitle(mBundle.getCharSequence(BiometricPrompt.KEY_TITLE));
 
         // We have to use builder.getContext() instead of the usual getContext() in order to get
@@ -181,11 +206,16 @@ public class FingerprintDialogFragment extends DialogFragment {
         mFingerprintIcon = layout.findViewById(R.id.fingerprint_icon);
         mErrorText = layout.findViewById(R.id.fingerprint_error);
 
-        final CharSequence negativeButtonText = mBundle.getCharSequence(BiometricPrompt.KEY_NEGATIVE_TEXT);
+        final CharSequence negativeButtonText =
+                isDeviceCredentialAllowed()
+                        ? getString(R.string.confirm_device_credential_password)
+                        : mBundle.getCharSequence(BiometricPrompt.KEY_NEGATIVE_TEXT);
         builder.setNegativeButton(negativeButtonText, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                if (mNegativeButtonListener != null) {
+                if (FingerprintDialogFragment.this.isDeviceCredentialAllowed()) {
+                    mDeviceCredentialButtonListener.onClick(dialog, which);
+                } else if (mNegativeButtonListener != null) {
                     mNegativeButtonListener.onClick(dialog, which);
                 } else {
                     Log.w(TAG, "No suitable negative button listener.");
@@ -208,7 +238,7 @@ public class FingerprintDialogFragment extends DialogFragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mContext = getActivity();
+        mContext = getContext();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             mErrorColor = getThemedColorFor(android.R.attr.colorError);
@@ -223,7 +253,6 @@ public class FingerprintDialogFragment extends DialogFragment {
         super.onResume();
         mLastState = STATE_NONE;
         updateFingerprintIcon(STATE_FINGERPRINT);
-        BiometricPrompt.Events.raise(Lifecycle.Event.ON_RESUME, this);
     }
 
     @Override
@@ -231,7 +260,6 @@ public class FingerprintDialogFragment extends DialogFragment {
         super.onPause();
         // Remove everything since the fragment is going away.
         mHandler.removeCallbacksAndMessages(null);
-        BiometricPrompt.Events.raise(Lifecycle.Event.ON_PAUSE, this);
     }
 
     @Override
@@ -289,6 +317,10 @@ public class FingerprintDialogFragment extends DialogFragment {
             return;
         }
         dismissAllowingStateLoss();
+    }
+
+    private boolean isDeviceCredentialAllowed() {
+        return mBundle.getBoolean(BiometricPrompt.KEY_ALLOW_DEVICE_CREDENTIAL);
     }
 
     private boolean shouldAnimateForTransition(int oldState, int newState) {

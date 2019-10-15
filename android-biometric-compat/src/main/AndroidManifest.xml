@@ -22,7 +22,7 @@
 
     <application>
         <activity
-            android:name="com.exxbrain.android.biometric.DeviceCredentialHandlerActivity"
+            android:name=".DeviceCredentialHandlerActivity"
             android:theme="@style/DeviceCredentialHandlerTheme"
             android:exported="true" />
     </application>

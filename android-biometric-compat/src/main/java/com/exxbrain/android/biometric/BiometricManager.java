@@ -22,8 +22,6 @@ import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
 import android.support.annotation.RequiresApi;
 import android.support.annotation.VisibleForTesting;
-import android.support.v4.hardware.fingerprint.FingerprintManagerCompat;
-import android.hardware.biometrics.BiometricPrompt;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -31,7 +29,7 @@ import java.lang.annotation.RetentionPolicy;
 /**
  * A class that contains biometric utilities. For authentication, see {@link BiometricPrompt}.
  * On devices running Q and above, this will query the framework's version of
- * {@link BiometricManager}. On devices P and older, this will query
+ * {@link android.hardware.biometrics.BiometricManager}. On devices P and older, this will query
  * {@link FingerprintManagerCompat}.
  */
 public class BiometricManager {
@@ -86,10 +84,7 @@ public class BiometricManager {
         }
     }
 
-    /**
-     * @param context context
-     * @return A {@link BiometricManager} instance with the provided context.
-     */
+    /** @return A {@link BiometricManager} instance with the provided context. */
     @NonNull
     public static BiometricManager from(@NonNull Context context) {
         return new BiometricManager(context);
@@ -102,7 +97,8 @@ public class BiometricManager {
             mFingerprintManager = null;
         } else {
             mBiometricManager = null;
-            mFingerprintManager = FingerprintManagerCompat.from(context);
+            mFingerprintManager =
+                    FingerprintManagerCompat.from(context);
         }
     }
 
