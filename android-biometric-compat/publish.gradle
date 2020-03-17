@@ -2,7 +2,7 @@ apply plugin: 'com.jfrog.bintray'
 apply plugin: 'maven-publish'
 
 group 'com.exxbrain.android'
-version '0.3'
+version '1.0.1'
 
 project.ext {
     mavGitUrl = 'https://github.com/exxbrain/android-biometric.git'
