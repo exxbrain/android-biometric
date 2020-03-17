@@ -1,4 +1,5 @@
 [![](https://jitpack.io/v/exxbrain/android-biometric.svg)](https://jitpack.io/#exxbrain/android-biometric)
+![Android CI](https://github.com/exxbrain/android-biometric/workflows/Android%20CI/badge.svg)
 
 # Android biometric
 Android biometric library inspired from [androidx.biometric](https://developer.android.com/reference/androidx/biometric/package-summary) for non androidx apps.
