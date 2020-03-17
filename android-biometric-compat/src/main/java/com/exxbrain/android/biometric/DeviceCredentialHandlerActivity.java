@@ -19,6 +19,7 @@ package com.exxbrain.android.biometric;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.RestrictTo;
 import android.support.v7.app.AppCompatActivity;
@@ -36,7 +37,11 @@ import android.util.Log;
 public class DeviceCredentialHandlerActivity extends AppCompatActivity {
     private static final String TAG = "DeviceCredentialHandler";
 
+    private static final String KEY_DID_CHANGE_CONFIGURATION = "did_change_configuration";
+
     static final String EXTRA_PROMPT_INFO_BUNDLE = "prompt_info_bundle";
+
+    private boolean mDidChangeConfiguration;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -50,11 +55,22 @@ public class DeviceCredentialHandlerActivity extends AppCompatActivity {
 
         // Must be called after setting the theme.
         super.onCreate(savedInstanceState);
+
+        // Don't reset the bridge when recreating from a configuration change.
+        mDidChangeConfiguration = savedInstanceState != null
+                    && savedInstanceState.getBoolean(KEY_DID_CHANGE_CONFIGURATION, false);
+        if (!mDidChangeConfiguration) {
+            bridge.stopIgnoringReset();
+        } else {
+            mDidChangeConfiguration = false;
+        }
+
         setTitle(null);
         setContentView(R.layout.device_credential_handler_activity);
 
         if (bridge.getExecutor() == null || bridge.getAuthenticationCallback() == null) {
             Log.e(TAG, "onCreate: Executor and/or callback was null!");
+            finish();
         } else {
             // (Re)connect to and launch a biometric prompt within this activity.
             final BiometricPrompt biometricPrompt = new BiometricPrompt(this,
@@ -74,7 +90,14 @@ public class DeviceCredentialHandlerActivity extends AppCompatActivity {
                 DeviceCredentialHandlerBridge.getInstanceIfNotNull();
         if (isChangingConfigurations() && bridge != null) {
             bridge.ignoreNextReset();
+            mDidChangeConfiguration = true;
         }
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean(KEY_DID_CHANGE_CONFIGURATION, mDidChangeConfiguration);
     }
 
     @Override
@@ -98,10 +121,12 @@ public class DeviceCredentialHandlerActivity extends AppCompatActivity {
         } else if (resultCode == RESULT_OK) {
             bridge.setDeviceCredentialResult(DeviceCredentialHandlerBridge.RESULT_SUCCESS);
             bridge.setConfirmingDeviceCredential(false);
+            bridge.startIgnoringReset();
         } else {
             // Treat any non-OK result as a user cancellation.
             bridge.setDeviceCredentialResult(DeviceCredentialHandlerBridge.RESULT_ERROR);
             bridge.setConfirmingDeviceCredential(false);
+            bridge.startIgnoringReset();
         }
 
         finish();

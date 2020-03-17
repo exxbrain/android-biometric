@@ -81,8 +81,7 @@ public class FingerprintHelperFragment extends Fragment {
         }
     }
 
-    @VisibleForTesting
-    MessageRouter mMessageRouter;
+    private MessageRouter mMessageRouter;
 
     // Re-set by the application, through BiometricPromptCompat upon orientation changes.
     @VisibleForTesting
@@ -114,7 +113,7 @@ public class FingerprintHelperFragment extends Fragment {
                 private void dismissAndForwardResult(final int errMsgId,
                         final CharSequence errString) {
                     mMessageRouter.sendMessage(FingerprintDialogFragment.MSG_DISMISS_DIALOG_ERROR);
-                    if (!isConfirmingDeviceCredential()) {
+                    if (!Utils.isConfirmingDeviceCredential()) {
                         mExecutor.execute(
                                 new Runnable() {
                                     @Override
@@ -131,49 +130,43 @@ public class FingerprintHelperFragment extends Fragment {
                         CharSequence errString) {
                     if (errMsgId == BiometricPrompt.ERROR_CANCELED) {
                         if (mCanceledFrom == USER_CANCELED_FROM_NONE) {
+                            // The dialog may not have been dismissed yet.
                             dismissAndForwardResult(errMsgId, errString);
                         }
+                        cleanup();
                     } else if (errMsgId == BiometricPrompt.ERROR_LOCKOUT
                             || errMsgId == BiometricPrompt.ERROR_LOCKOUT_PERMANENT) {
                         dismissAndForwardResult(errMsgId, errString);
+                        cleanup();
                     } else {
-                        // Avoid passing a null error string to the client callback. This needs to
-                        // be a final copy, since it's accessed in the runnable below.
-                        final CharSequence errStringNonNull;
+                        // Avoid passing a null error string to the client callback. This needs
+                        // to be a final copy, since it's accessed in the runnable below.
+                        final CharSequence dialogErrString;
                         if (errString != null) {
-                            errStringNonNull = errString;
+                            dialogErrString = errString;
                         } else {
                             Log.e(TAG, "Got null string for error message: " + errMsgId);
-                            errStringNonNull =
-                                    mContext.getResources().getString(R.string.default_error_msg);
+                            dialogErrString = mContext.getResources().getString(
+                                    R.string.default_error_msg);
                         }
 
-                        // Ensure we are only sending publicly defined errors.
-                        final int errMsgIdToSend = Utils.isUnknownError(errMsgId)
+                        // Ensure we're only sending publicly defined errors.
+                        final int dialogErrMsgId = Utils.isUnknownError(errMsgId)
                                 ? BiometricPrompt.ERROR_VENDOR : errMsgId;
 
                         mMessageRouter.sendMessage(FingerprintDialogFragment.MSG_SHOW_ERROR,
-                                errMsgIdToSend, 0, errStringNonNull);
-                        if (!isConfirmingDeviceCredential()) {
-                            mHandler.postDelayed(
-                                    new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            mExecutor.execute(new Runnable() {
-                                                @Override
-                                                public void run() {
-                                                    mClientAuthenticationCallback
-                                                            .onAuthenticationError(
-                                                                    errMsgIdToSend,
-                                                                    errStringNonNull);
-                                                }
-                                            });
-                                        }
-                                    },
-                                    FingerprintDialogFragment.HIDE_DIALOG_DELAY);
-                        }
+                                dialogErrMsgId, 0, dialogErrString);
+                        mHandler.postDelayed(
+                                new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        dismissAndForwardResult(
+                                                dialogErrMsgId, dialogErrString);
+                                        cleanup();
+                                    }
+                                },
+                                FingerprintDialogFragment.getHideDialogDelay(getContext()));
                     }
-                    cleanup();
                 }
 
                 @Override
@@ -246,7 +239,7 @@ public class FingerprintHelperFragment extends Fragment {
     @SuppressWarnings("deprecation")
     @Nullable
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
-                             @Nullable Bundle savedInstanceState) {
+            @Nullable Bundle savedInstanceState) {
         if (!mShowing) {
             mCancellationSignal = new CancellationSignal();
             mCanceledFrom = USER_CANCELED_FROM_NONE;
@@ -317,7 +310,7 @@ public class FingerprintHelperFragment extends Fragment {
             getFragmentManager().beginTransaction().detach(this).commitAllowingStateLoss();
         }
 
-        if (!isConfirmingDeviceCredential()) {
+        if (!Utils.isConfirmingDeviceCredential()) {
             Utils.maybeFinishHandler(activity);
         }
     }
@@ -346,7 +339,7 @@ public class FingerprintHelperFragment extends Fragment {
      * @param error The error code that will be sent to the client.
      */
     private void sendErrorToClient(final int error) {
-        if (!isConfirmingDeviceCredential()) {
+        if (!Utils.isConfirmingDeviceCredential()) {
             mClientAuthenticationCallback.onAuthenticationError(error,
                     getErrorString(mContext, error));
         }
@@ -405,10 +398,5 @@ public class FingerprintHelperFragment extends Fragment {
         } else {
             return null;
         }
-    }
-
-    private static boolean isConfirmingDeviceCredential() {
-        DeviceCredentialHandlerBridge bridge = DeviceCredentialHandlerBridge.getInstanceIfNotNull();
-        return bridge != null && bridge.isConfirmingDeviceCredential();
     }
 }

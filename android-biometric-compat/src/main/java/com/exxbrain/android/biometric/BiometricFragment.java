@@ -95,20 +95,22 @@ public class BiometricFragment extends Fragment {
                 @Override
                 public void onAuthenticationError(final int errorCode,
                                                   final CharSequence errString) {
-                    mClientExecutor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            CharSequence error = errString;
-                            if (error == null) {
-                                error = mContext.getString(R.string.default_error_msg) + " "
-                                        + errorCode;
+                    if (!Utils.isConfirmingDeviceCredential()) {
+                        mClientExecutor.execute(new Runnable() {
+                            @Override
+                            public void run() {
+                                CharSequence error = errString;
+                                if (error == null) {
+                                    error = mContext.getString(R.string.default_error_msg) + " "
+                                            + errorCode;
+                                }
+                                mClientAuthenticationCallback
+                                        .onAuthenticationError(Utils.isUnknownError(errorCode)
+                                                ? BiometricPrompt.ERROR_VENDOR : errorCode, error);
                             }
-                            mClientAuthenticationCallback
-                                    .onAuthenticationError(Utils.isUnknownError(errorCode)
-                                            ? BiometricPrompt.ERROR_VENDOR : errorCode, error);
-                        }
-                    });
-                    cleanup();
+                        });
+                        cleanup();
+                    }
                 }
 
                 @Override
@@ -233,17 +235,18 @@ public class BiometricFragment extends Fragment {
     }
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
+    public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
     }
 
-    public void setBundle(Bundle bundle) {
+    void setBundle(@Nullable Bundle bundle) {
         mBundle = bundle;
     }
 
     boolean isDeviceCredentialAllowed() {
-        return mBundle.getBoolean(BiometricPrompt.KEY_ALLOW_DEVICE_CREDENTIAL, false);
+        return mBundle != null
+                && mBundle.getBoolean(BiometricPrompt.KEY_ALLOW_DEVICE_CREDENTIAL, false);
     }
 
     @Override
@@ -253,10 +256,11 @@ public class BiometricFragment extends Fragment {
     }
 
     @Override
+    @Nullable
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
             @Nullable Bundle savedInstanceState) {
         // Start the actual authentication when the fragment is attached.
-        if (!mShowing) {
+        if (!mShowing && mBundle != null) {
             mNegativeButtonText = mBundle.getCharSequence(BiometricPrompt.KEY_NEGATIVE_TEXT);
 
             final android.hardware.biometrics.BiometricPrompt.Builder builder =

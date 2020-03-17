@@ -465,13 +465,14 @@ public class BiometricPrompt implements BiometricConstants {
                     mExecutor.execute(new Runnable() {
                         @Override
                         public void run() {
-                            if (usingBiometricFragment()) {
+                            if (canUseBiometricFragment() && mBiometricFragment != null) {
                                 final CharSequence errorText =
                                         mBiometricFragment.getNegativeButtonText();
                                 mAuthenticationCallback.onAuthenticationError(
                                         ERROR_NEGATIVE_BUTTON, errorText != null ? errorText : "");
                                 mBiometricFragment.cleanup();
-                            } else {
+                            } else if (mFingerprintDialogFragment != null
+                                    && mFingerprintHelperFragment != null) {
                                 final CharSequence errorText =
                                         mFingerprintDialogFragment.getNegativeButtonText();
                                 mAuthenticationCallback.onAuthenticationError(
@@ -479,6 +480,8 @@ public class BiometricPrompt implements BiometricConstants {
                                 mFingerprintHelperFragment.cancel(
                                         FingerprintHelperFragment
                                                 .USER_CANCELED_FROM_NEGATIVE_BUTTON);
+                            } else {
+                                Log.e(TAG, "Negative button callback not run. Fragment was null.");
                             }
                         }
                     });
@@ -492,47 +495,45 @@ public class BiometricPrompt implements BiometricConstants {
     private final LifecycleObserver mLifecycleObserver = new LifecycleObserver() {
         @OnLifecycleEvent(Lifecycle.Event.ON_PAUSE)
         void onPause() {
-            if (!isChangingConfigurations()) {
-                if (usingBiometricFragment()) {
-                    // May be null if no authentication is occurring.
-                    if (mBiometricFragment != null) {
-                        // TODO(b/123378871): Fix behavior in R and remove this workaround.
-                        // Ignore the first onPause if isDeviceCredentialAllowed is true, since
-                        // the Q implementation launches ConfirmDeviceCredentialActivity, which puts
-                        // the client app onPause. Implementations prior to Q instead launch
-                        // DeviceCredentialHandlerActivity, resulting in the same problem.
-                        if (mBiometricFragment.isDeviceCredentialAllowed()) {
-                            if (!mPausedOnce) {
-                                mPausedOnce = true;
-                            } else {
-                                mBiometricFragment.cancel();
-                            }
-                        } else {
-                            mBiometricFragment.cancel();
-                        }
+            if (isChangingConfigurations()) {
+                if (DEBUG) Log.v(TAG, "onPause() not run while configuration is changing.");
+                return;
+            }
+
+            if (canUseBiometricFragment() && mBiometricFragment != null) {
+                // TODO(b/123378871): Fix behavior in R and remove this workaround.
+                // Ignore the first onPause if isDeviceCredentialAllowed is true, since
+                // the Q implementation launches ConfirmDeviceCredentialActivity, which puts
+                // the client app onPause. Implementations prior to Q instead launch
+                // DeviceCredentialHandlerActivity, resulting in the same problem.
+                if (mBiometricFragment.isDeviceCredentialAllowed()) {
+                    if (!mPausedOnce) {
+                        mPausedOnce = true;
+                    } else {
+                        mBiometricFragment.cancel();
                     }
                 } else {
-                    // May be null if no authentication is occurring.
-                    if (mFingerprintDialogFragment != null && mFingerprintHelperFragment != null) {
-                        dismissFingerprintFragments(mFingerprintDialogFragment,
-                                    mFingerprintHelperFragment);
-                    }
+                    mBiometricFragment.cancel();
                 }
-                maybeResetHandlerBridge();
+            } else if (mFingerprintDialogFragment != null && mFingerprintHelperFragment != null) {
+                dismissFingerprintFragments(mFingerprintDialogFragment, mFingerprintHelperFragment);
             }
+
+            maybeResetHandlerBridge();
         }
 
         @OnLifecycleEvent(Lifecycle.Event.ON_RESUME)
         void onResume() {
-            if (usingBiometricFragment()) {
-                mBiometricFragment =
-                        (BiometricFragment) getFragmentManager().findFragmentByTag(
-                                BIOMETRIC_FRAGMENT_TAG);
-                if (DEBUG) Log.v(TAG, "BiometricFragment: " + mBiometricFragment);
-                if (mBiometricFragment != null) {
-                    mBiometricFragment.setCallbacks(mExecutor, mNegativeButtonListener,
-                            mAuthenticationCallback);
-                }
+            mBiometricFragment = canUseBiometricFragment()
+                    ? (BiometricFragment) getFragmentManager().findFragmentByTag(
+                            BIOMETRIC_FRAGMENT_TAG)
+                    : null;
+            if (DEBUG && canUseBiometricFragment()) {
+                Log.v(TAG, "BiometricFragment: " + mBiometricFragment);
+            }
+            if (canUseBiometricFragment() && mBiometricFragment != null) {
+                mBiometricFragment.setCallbacks(mExecutor, mNegativeButtonListener,
+                        mAuthenticationCallback);
             } else {
                 mFingerprintDialogFragment =
                         (FingerprintDialogFragment) getFragmentManager().findFragmentByTag(
@@ -556,7 +557,7 @@ public class BiometricPrompt implements BiometricConstants {
             }
 
             maybeHandleDeviceCredentialResult();
-            maybeInitHandlerBridge(false /* ignoreNextReset */);
+            maybeInitHandlerBridge(false /* startIgnoringReset */);
         }
     };
 
@@ -596,7 +597,7 @@ public class BiometricPrompt implements BiometricConstants {
 
     /**
      * Constructs a {@link BiometricPrompt} which can be used to prompt the user for
-     * authentication. The authenticaton prompt created by
+     * authentication. The authentication prompt created by
      * {@link BiometricPrompt#authenticate(PromptInfo, CryptoObject)} and
      * {@link BiometricPrompt#authenticate(PromptInfo)} will persist across device
      * configuration changes by default. If authentication is in progress, re-creating
@@ -633,7 +634,7 @@ public class BiometricPrompt implements BiometricConstants {
      * authentication, use {@link #cancelAuthentication()}.
      *
      * @param info   The information that will be displayed on the prompt. Create this object using
-     *               {@link PromptInfo.Builder}.
+     *               {@link BiometricPrompt.PromptInfo.Builder}.
      * @param crypto The crypto object associated with the authentication.
      */
     public void authenticate(@NonNull PromptInfo info, @NonNull CryptoObject crypto) {
@@ -652,7 +653,7 @@ public class BiometricPrompt implements BiometricConstants {
      * authentication, use {@link #cancelAuthentication()}.
      *
      * @param info The information that will be displayed on the prompt. Create this object using
-     *             {@link PromptInfo.Builder}.
+     *             {@link BiometricPrompt.PromptInfo.Builder}.
      */
     public void authenticate(@NonNull PromptInfo info) {
         if (info == null) {
@@ -663,6 +664,7 @@ public class BiometricPrompt implements BiometricConstants {
 
     private void authenticateInternal(@NonNull PromptInfo info, @Nullable CryptoObject crypto) {
         mIsHandlingDeviceCredential = info.isHandlingDeviceCredentialResult();
+        final FragmentActivity activity = getActivity();
         if (info.isDeviceCredentialAllowed() && Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
             // Launch handler activity to support device credential on older versions.
             if (!mIsHandlingDeviceCredential) {
@@ -672,7 +674,6 @@ public class BiometricPrompt implements BiometricConstants {
 
             // Fall back to device credential immediately if no biometrics are enrolled.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                final FragmentActivity activity = getActivity();
                 if (activity == null) {
                     Log.e(TAG, "Failed to authenticate with device credential. Activity was null.");
                     return;
@@ -706,10 +707,14 @@ public class BiometricPrompt implements BiometricConstants {
         final Bundle bundle = info.getBundle();
         mPausedOnce = false;
 
-        if (usingBiometricFragment()) {
+        // Force some devices to fall back to fingerprint in order to support strong (crypto) auth.
+        final boolean shouldForceFingerprint = DEBUG_FORCE_FINGERPRINT
+                || (activity != null && crypto != null && Utils.shouldUseFingerprintForCrypto(
+                        activity, Build.MANUFACTURER, Build.MODEL));
+
+        if (!shouldForceFingerprint && canUseBiometricFragment()) {
             BiometricFragment biometricFragment =
-                    (BiometricFragment) fragmentManager.findFragmentByTag(
-                            BIOMETRIC_FRAGMENT_TAG);
+                    (BiometricFragment) fragmentManager.findFragmentByTag(BIOMETRIC_FRAGMENT_TAG);
             if (biometricFragment != null) {
                 mBiometricFragment = biometricFragment;
             } else {
@@ -745,11 +750,14 @@ public class BiometricPrompt implements BiometricConstants {
 
             mFingerprintDialogFragment.setNegativeButtonListener(mNegativeButtonListener);
             mFingerprintDialogFragment.setBundle(bundle);
-            if (fingerprintDialogFragment == null) {
-                mFingerprintDialogFragment.show(fragmentManager, DIALOG_FRAGMENT_TAG);
-            } else if (mFingerprintDialogFragment.isDetached()) {
-                fragmentManager.beginTransaction().attach(mFingerprintDialogFragment)
-                        .commitAllowingStateLoss();
+
+            if (activity != null && !Utils.shouldHideFingerprintDialog(activity, Build.MODEL)) {
+                if (fingerprintDialogFragment == null) {
+                    mFingerprintDialogFragment.show(fragmentManager, DIALOG_FRAGMENT_TAG);
+                } else if (mFingerprintDialogFragment.isDetached()) {
+                    fragmentManager.beginTransaction().attach(mFingerprintDialogFragment)
+                            .commitAllowingStateLoss();
+                }
             }
 
             // Create the connection to FingerprintManager
@@ -797,10 +805,8 @@ public class BiometricPrompt implements BiometricConstants {
      * details.
      */
     public void cancelAuthentication() {
-        if (usingBiometricFragment()) {
-            if (mBiometricFragment != null) {
-                mBiometricFragment.cancel();
-            }
+        if (canUseBiometricFragment() && mBiometricFragment != null) {
+            mBiometricFragment.cancel();
 
             // If we launched a device credential handler activity, also clean up its fragment.
             if (!mIsHandlingDeviceCredential) {
@@ -840,7 +846,7 @@ public class BiometricPrompt implements BiometricConstants {
             return;
         }
 
-        maybeInitHandlerBridge(true /* ignoreNextReset */);
+        maybeInitHandlerBridge(true /* startIgnoringReset */);
 
         // Set the handling device credential flag so the new prompt knows not to launch another
         // instance of the handler activity.
@@ -857,10 +863,10 @@ public class BiometricPrompt implements BiometricConstants {
      * prompt and one hosted by {@link DeviceCredentialHandlerActivity}, and initializes all of the
      * relevant data for the bridge.
      *
-     * @param ignoreNextReset Whether the bridge should ignore the next call to
-     * {@link DeviceCredentialHandlerBridge#reset()} once initialized.
+     * @param startIgnoringReset Whether the bridge should start ignoring calls to
+     *                           {@link DeviceCredentialHandlerBridge#reset()} once initialized.
      */
-    private void maybeInitHandlerBridge(boolean ignoreNextReset) {
+    private void maybeInitHandlerBridge(boolean startIgnoringReset) {
         // Don't create bridge if DeviceCredentialHandlerActivity isn't needed.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             return;
@@ -868,7 +874,7 @@ public class BiometricPrompt implements BiometricConstants {
 
         final DeviceCredentialHandlerBridge bridge = DeviceCredentialHandlerBridge.getInstance();
         if (mIsHandlingDeviceCredential) {
-            if (usingBiometricFragment() && mBiometricFragment != null) {
+            if (canUseBiometricFragment() && mBiometricFragment != null) {
                 bridge.setBiometricFragment(mBiometricFragment);
             } else if (mFingerprintDialogFragment != null && mFingerprintHelperFragment != null) {
                 bridge.setFingerprintFragments(mFingerprintDialogFragment,
@@ -888,8 +894,8 @@ public class BiometricPrompt implements BiometricConstants {
         }
         bridge.setCallbacks(mExecutor, mNegativeButtonListener, mAuthenticationCallback);
 
-        if (ignoreNextReset) {
-            bridge.ignoreNextReset();
+        if (startIgnoringReset) {
+            bridge.startIgnoringReset();
         }
     }
 
@@ -911,7 +917,7 @@ public class BiometricPrompt implements BiometricConstants {
                 case DeviceCredentialHandlerBridge.RESULT_SUCCESS:
                     // Device credential auth succeeded. This is incompatible with crypto.
                     mAuthenticationCallback.onAuthenticationSucceeded(
-                            new AuthenticationResult(null /* crypto */));
+                            new BiometricPrompt.AuthenticationResult(null /* crypto */));
                     bridge.stopIgnoringReset();
                     bridge.reset();
                     break;
@@ -959,11 +965,11 @@ public class BiometricPrompt implements BiometricConstants {
     }
 
     /**
-     * @return True if the prompt handles authentication via {@link BiometricFragment}, or false
-     * if it does so via {@link FingerprintDialogFragment}.
+     * @return true if the prompt can handle authentication via {@link BiometricFragment}, based
+     * on API level, or false if it will do so via {@link FingerprintDialogFragment}.
      */
-    private static boolean usingBiometricFragment() {
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && !DEBUG_FORCE_FINGERPRINT;
+    private static boolean canUseBiometricFragment() {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.P;
     }
 
     /**
